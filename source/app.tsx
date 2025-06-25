@@ -2,12 +2,25 @@
 import React, {useState, useEffect} from 'react';
 import {Text, Box, useStdout} from 'ink';
 import TextInput from 'ink-text-input';
-import {chatFx} from './services/chatService.js';
+import {chatFx, Message} from './services/chatService.js';
 import {trace} from '@rxfx/effect';
-import {useAtMountTime} from '@rxfx/react';
+import {useAtMountTime, useService} from '@rxfx/react';
 type Props = {
 	name: string | undefined;
 };
+
+interface ChatMessageProps {
+	message: Message;
+}
+
+export function ChatMessage({message}: ChatMessageProps) {
+	const isUser = message.role === 'user';
+	return (
+		<Box justifyContent={isUser ? 'flex-end' : 'flex-start'}>
+			<Text>{message.content} </Text>
+		</Box>
+	);
+}
 
 export default function App({name = 'Stranger'}: Props) {
 	const [query, setQuery] = useState('');
@@ -51,6 +64,7 @@ export default function App({name = 'Stranger'}: Props) {
 					Submit
 				</Text>
 			</Box>
+			<Box flexDirection="column"></Box>
 		</Box>
 	);
 }
