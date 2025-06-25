@@ -2,6 +2,7 @@
 import {createEffect, after} from '@rxfx/effect';
 import OpenAI from 'openai';
 import {Observable} from 'rxjs';
+import {produce} from 'immer';
 
 // #region Types
 export type MessageRole = 'user' | 'assistant' | 'system';
@@ -105,41 +106,41 @@ export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
 );
 
 // Use the reducer to populate chatRxFxService.state
-// chatFx.reduceWith(
-// 	produce((messages, event) => {
-// 		if (event.type === 'request') {
-// 			const userMessage = event.payload;
-// 			const origId = '' + userMessage.id;
+chatFx.reduceWith(
+	produce((messages, event) => {
+		if (event.type === 'request') {
+			const userMessage = event.payload;
+			const origId = '' + userMessage.id;
 
-// 			// create placeholder
-// 			const assistantMessage: AssistantMessage = {
-// 				id: origId,
-// 				content: '',
-// 				role: 'assistant',
-// 				createdAt: new Date(),
-// 				isComplete: false,
-// 			};
+			// create placeholder
+			const assistantMessage: AssistantMessage = {
+				id: origId,
+				content: '',
+				role: 'assistant',
+				createdAt: new Date(),
+				isComplete: false,
+			};
 
-// 			// prefix only the request in state, so updates find the response
-// 			messages.push({...userMessage, id: `req-${origId}`});
-// 			messages.push(assistantMessage);
-// 		}
-// 		if (event.type === 'response') {
-// 			const chunk = event.payload;
-// 			const response = messages.find(
-// 				m => m.id === chunk.requestId && m.role === 'assistant',
-// 			);
-// 			response.content += chunk.text;
-// 		}
+			// prefix only the request in state, so updates find the response
+			messages.push({...userMessage, id: `req-${origId}`});
+			messages.push(assistantMessage);
+		}
+		if (event.type === 'response') {
+			const chunk = event.payload;
+			const response = messages.find(
+				m => m.id === chunk.requestId && m.role === 'assistant',
+			);
+			response.content += chunk.text;
+		}
 
-// 		if (event.type === 'canceled') {
-// 			const response = messages.find(
-// 				m => m.id === event.payload.id && m.role === 'assistant',
-// 			);
-// 			response.content += ' (Canceled)';
-// 		}
+		if (event.type === 'canceled') {
+			const response = messages.find(
+				m => m.id === event.payload.id && m.role === 'assistant',
+			);
+			response.content += ' (Canceled)';
+		}
 
-// 		return messages;
-// 	}),
-// 	[], // initial value - lost way down below :o
-// );
+		return messages;
+	}),
+	[], // initial value - lost way down below :o
+);
