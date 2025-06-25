@@ -17,31 +17,39 @@ export function ChatMessage({message}: ChatMessageProps) {
 	const isUser = message.role === 'user';
 	return (
 		<Box justifyContent={isUser ? 'flex-end' : 'flex-start'}>
-			<Text>{message.content} </Text>
+			<Text>{message.content + '\n'} </Text>
 		</Box>
 	);
 }
 
+const randomId = (length = 7) => {
+	return Math.floor(Math.pow(2, length * 4) * Math.random())
+		.toString(16)
+		.padStart(length, '0');
+};
+
 export default function App({name = 'Stranger'}: Props) {
 	const [query, setQuery] = useState('');
 	const {write} = useStdout();
+	const {state: messages} = useService(chatFx);
 
 	function handleSubmit(value) {
 		const userMessage = {
-			id: '1234',
-			content: value,
+			id: randomId(),
+			content: value ?? 'Explain AI in 2 sentences to an 8 year old.',
 			role: 'user',
 			createdAt: new Date(),
 		};
 		chatFx.request(userMessage);
+		setQuery('');
 	}
 
 	// log all events (their types)
-	useAtMountTime(() =>
-		trace(chatFx, 'chat', (type, payload) => {
-			write(type + ': ' + JSON.stringify(payload) + '\n');
-		}),
-	);
+	// useAtMountTime(() =>
+	// 	trace(chatFx, 'chat', (type, payload) => {
+	// 		write(type + ': ' + JSON.stringify(payload) + '\n');
+	// 	}),
+	// );
 
 	return (
 		<Box flexDirection="column">
@@ -64,7 +72,11 @@ export default function App({name = 'Stranger'}: Props) {
 					Submit
 				</Text>
 			</Box>
-			<Box flexDirection="column"></Box>
+			<Box flexDirection="column">
+				{messages.map((message, idx) => (
+					<ChatMessage key={idx} message={message} />
+				))}
+			</Box>
 		</Box>
 	);
 }

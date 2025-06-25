@@ -3,6 +3,7 @@ import {createEffect, after} from '@rxfx/effect';
 import OpenAI from 'openai';
 import {Observable} from 'rxjs';
 import {produce} from 'immer';
+import {concatMap} from 'rxjs/operators';
 
 // #region Types
 export type MessageRole = 'user' | 'assistant' | 'system';
@@ -43,6 +44,12 @@ function getAPIKey() {
 	} else {
 		return process.env['OPENAI_API_KEY'];
 	}
+}
+
+const TOKEN_PRINT_DELAY = 200;
+/** Randomizes the timing of events, preserving the average duration. */
+export function randomizePreservingAverage(duration: number) {
+	return duration * Math.log(Math.random()) * -1;
 }
 
 function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
@@ -102,7 +109,15 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
 // #endregion
 
 export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
-	getLLMStream,
+	// getLLMStream,
+	// For an intentional slow-down...
+	req => {
+		return getLLMStream(req).pipe(
+			concatMap(chunk =>
+				after(randomizePreservingAverage(TOKEN_PRINT_DELAY), chunk),
+			),
+		);
+	},
 );
 
 // Use the reducer to populate chatRxFxService.state
