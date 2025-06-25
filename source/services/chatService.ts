@@ -73,9 +73,11 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
 			.create({
 				model: 'gpt-4.1',
 				messages: [
+					// include the old messages remembered by the effect
+					...chatFx.state.value,
+					// and the new one
 					{
 						role: 'user',
-						// content: "Say 'double bubble bath' 3 times fast.",
 						content: userMessage.content,
 					},
 				],
