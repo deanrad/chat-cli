@@ -88,28 +88,25 @@ export default function App({name = 'Stranger'}: Props) {
 			</Box>
 			<Box>
 				<Text>
-					Ask the <Text bold>AI</Text> <Text dimColor> (Esc to cancel)</Text>:
+					Ask the <Text bold>AI</Text>{' '}
+					<Text dimColor> (Esc to cancel, Ctrl-C to quit)</Text>:
 				</Text>
 			</Box>
-			<Box flexDirection="row">
+			<Box flexDirection="row" borderStyle="double">
+				<Text> &gt; </Text>
 				<TextInput
 					value={query}
 					onChange={v => {
-						if (chatFx.isActive.value) return;
+						// TODO don't allow input changes when active
 						setQuery(v);
 					}}
 					onSubmit={value => {
-						if (chatFx.isActive.value) return;
+						// TODO don't allow input submissions when active
 						handleSubmit(value);
 					}}
 					width={50}
 					alignSelf="auto"
 				></TextInput>
-			</Box>
-			<Box>
-				{/* <Text backgroundColor={'#33AA33'} color={'white'} bold>
-					Submit
-				</Text> */}
 			</Box>
 		</Box>
 	);
