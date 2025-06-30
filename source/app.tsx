@@ -42,7 +42,7 @@ export default function App() {
   const { write } = useStdout();
 
   // TODO Hook up service state as variable 'messages'
-  const messages = [];
+  const { state: messages } = useService(chatFx);
   // TODO distinguish loading (before response) from working (active)
 
   useInput((_, key) => {
@@ -65,6 +65,7 @@ export default function App() {
     setQuery("");
 
     // TODO send userMessage to service
+    chatFx(userMessage);
   }
 
   return (
