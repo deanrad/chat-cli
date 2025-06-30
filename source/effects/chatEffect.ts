@@ -98,14 +98,11 @@ chatFx.reduceWith(
 
 // Definitions
 function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
-  try {
-    openai ||= new OpenAI({
-      apiKey: getAPIKey(),
-      dangerouslyAllowBrowser: true,
-    });
-  } catch (error) {
-    console.error("Failed to initialize OpenAI:", error);
-  }
+
+  openai ||= new OpenAI({
+    apiKey: getAPIKey(),
+    dangerouslyAllowBrowser: true,
+  });
 
   return new Observable((notify) => {
     let canceled = false; // in order to truly stop streaming
@@ -141,6 +138,9 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
         }
         // Always complete - since .next doesn't complete by itself, unlike Promise.resolve
         notify.complete();
+      })
+      .catch((ex) => {
+        notify.error(ex);
       });
 
     return () => {
