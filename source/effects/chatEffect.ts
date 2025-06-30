@@ -115,6 +115,7 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
         model: "gpt-4.1",
         messages: [
           // TODO include previous messages when sending the current one
+          ...chatFx.state.value,
           {
             role: "user",
             content: userMessage.content,
