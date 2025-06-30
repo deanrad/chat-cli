@@ -62,8 +62,13 @@ export default function App() {
 
   useInput((_, key) => {
     if (key.escape) {
-      // TODO suppport cancelation
-      chatFx.cancelCurrent();
+      if (chatFx.isActive.value) {
+        // TODO suppport cancelation
+        chatFx.cancelCurrent();
+      } else {
+        // TODO support reset
+        chatFx.reset();
+      }
     }
 
     if (key.upArrow) {
