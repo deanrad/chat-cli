@@ -4,8 +4,10 @@ import {
   Observable,
   after,
   THRESHOLD,
-  randomizePreservingAverage,
+  randomizePreservingAverage as randomize,
 } from "rxfx";
+import { concatMap } from "rxjs/operators";
+
 import OpenAI from "openai";
 import { produce } from "immer";
 
@@ -53,7 +55,15 @@ function getAPIKey() {
 
 // TODO Bonus: Introduce a delay after which each token is printed
 export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
-  getLLMStream
+  // getLLMStream
+  (req) => {
+    const spacedOutChunks = getLLMStream(req).pipe(
+      concatMap((chunk) => {
+        return after(randomize(THRESHOLD.AnimationShort), chunk);
+      })
+    );
+    return after(THRESHOLD.DeepBreath, spacedOutChunks);
+  }
 );
 
 // Use the reducer to populate chatRxFxService.state
