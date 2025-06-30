@@ -44,6 +44,17 @@ export default function App() {
   // TODO Hook up service state as variable 'messages'
   const { state: messages, isActive: isWorking } = useService(chatFx);
   // TODO distinguish loading (before response) from working (active)
+  const [hasFirstChunk, setHasFirstChunk] = useState(false);
+  useWhileMounted(() =>
+    chatFx.observe({
+      response() {
+        setHasFirstChunk(true);
+      },
+      finalized() {
+        setHasFirstChunk(false);
+      },
+    })
+  );
 
   useInput((_, key) => {
     if (key.escape) {
@@ -81,7 +92,7 @@ export default function App() {
       <Box>
         <Text>
           {/* TODO display a loading state */}
-          {isWorking ? "(Working) " : ""}
+          {isWorking ? (hasFirstChunk ? "(Working) " : "(Loading) ") : ""}
           Ask the <Text bold>AI</Text>{" "}
           <Text dimColor> (Esc to cancel, Ctrl-C to quit)</Text>:
         </Text>
