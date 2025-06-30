@@ -42,7 +42,7 @@ export default function App() {
   const { write } = useStdout();
 
   // TODO Hook up service state as variable 'messages'
-  const { state: messages } = useService(chatFx);
+  const { state: messages, isActive: isWorking } = useService(chatFx);
   // TODO distinguish loading (before response) from working (active)
 
   useInput((_, key) => {
@@ -81,6 +81,7 @@ export default function App() {
       <Box>
         <Text>
           {/* TODO display a loading state */}
+          {isWorking ? "(Working) " : ""}
           Ask the <Text bold>AI</Text>{" "}
           <Text dimColor> (Esc to cancel, Ctrl-C to quit)</Text>:
         </Text>
