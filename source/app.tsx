@@ -59,6 +59,7 @@ export default function App() {
   useInput((_, key) => {
     if (key.escape) {
       // TODO suppport cancelation
+      chatFx.cancelCurrent();
     }
 
     if (key.upArrow) {
