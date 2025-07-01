@@ -3,7 +3,8 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useStdout, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { chatFx } from "./effects/chatEffect.js";
-import { useService } from "@rxfx/react";
+import { useService, useWhileMounted } from "@rxfx/react";
+import { trace } from "rxfx";
 
 interface ChatMessageProps {
   message: Message;
@@ -36,7 +37,7 @@ export default function App() {
   const { write } = useStdout();
 
   // 1. TODO Hook up service state as variable 'messages'
-  const messages = [];
+  const { state: messages } = useService(chatFx);
   // 3. TODO show loading/active states
 
   useInput((_, key) => {
@@ -49,6 +50,13 @@ export default function App() {
     }
   });
 
+  // View all events in the UI
+  // useWhileMounted(() =>
+  //   trace(chatFx, "chat", (type, payload) => {
+  //     write(`${type}: ${JSON.stringify(payload)}`);
+  //   })
+  // );
+
   function handleSubmit(value) {
     const userMessage = {
       id: randomId(),
@@ -59,6 +67,7 @@ export default function App() {
     setQuery("");
 
     // 1. TODO Call chat effect with userMessage
+    chatFx(userMessage);
   }
 
   return (
