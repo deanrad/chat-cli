@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useStdout, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { chatFx } from "./effects/chatEffect.js";
-import { useService, useWhileMounted } from "@rxfx/react";
+import { useFx, useWhileMounted } from "@rxfx/react";
 import { trace } from "rxfx";
 
 interface ChatMessageProps {
@@ -37,12 +37,7 @@ export default function App() {
   const { write } = useStdout();
 
   // 1. TODO Hook up service state as variable 'messages'
-  const {
-    state: messages,
-    isLoading,
-    isActive,
-    currentError,
-  } = useService(chatFx);
+  const { state: messages, isLoading, isActive, currentError } = useFx(chatFx);
   // 3. TODO show loading/active states
 
   useInput((_, key) => {
