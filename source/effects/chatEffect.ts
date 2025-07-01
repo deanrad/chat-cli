@@ -92,6 +92,9 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
         }
         // Always complete - since .next doesn't complete by itself, unlike Promise.resolve
         notify.complete();
+      })
+      .catch((ex) => {
+        notify.error(ex.message);
       });
 
     return () => {
