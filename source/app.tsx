@@ -37,7 +37,7 @@ export default function App() {
   const { write } = useStdout();
 
   // 1. TODO Hook up service state as variable 'messages'
-  const { state: messages } = useService(chatFx);
+  const { state: messages, isLoading, isActive } = useService(chatFx);
   // 3. TODO show loading/active states
 
   useInput((_, key) => {
@@ -83,6 +83,7 @@ export default function App() {
       <Box>
         <Text>
           {/* 3. TODO Display Loading, Active states */}
+          {isActive ? (isLoading ? "(Loading) " : "(Working) ") : ""}
           {/* 5. TODO Trap and display any error */}
           Ask the <Text bold>AI</Text>{" "}
           <Text dimColor> (Esc to cancel, Ctrl-C to quit)</Text>:
