@@ -102,10 +102,12 @@ export default function App() {
           value={query}
           onChange={(v) => {
             // 6. TODO Disable typing while working
+            if (isActive) return;
             setQuery(v);
           }}
           onSubmit={(value) => {
             // 6. TODO Disable typing while working
+            if (isActive) return;
             handleSubmit(value);
           }}
           width={50}

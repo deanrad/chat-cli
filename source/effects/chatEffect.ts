@@ -1,6 +1,6 @@
 // @ts-nocheck
 import {
-  createEffect,
+  createBlockingEffect as createEffect,
   Observable,
   after,
   THRESHOLD,
