@@ -97,13 +97,13 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
 }
 
 // 7. TODO Bonus: Introduce a delay after which each token is printed
-export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
+export const _chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
   getLLMStream,
   [] // initialState
 );
 
 // Use the reducer to populate chatRxFxService.state
-chatFx.reduceWith(
+_chatFx.reduceWith(
   produce((messages, event) => {
     if (event.type === "request") {
       const userMessage = event.payload;
@@ -142,4 +142,52 @@ chatFx.reduceWith(
   [] // initial value
 );
 
+// 0. Mock state and effect
+
+// const loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget felis eget urna ultricies tincidunt vel ut nisi. Fusce auctor, libero vel lacinia interdum, nibh nisi semper urna, at efficitur metus nulla et lacus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras sagittis, arcu sed finibus feugiat, ipsum neque egestas eros, vel aliquam sapien dolor sit amet libero. Suspendisse potenti. Proin consectetur aliquam odio, a molestie lorem finibus at. Nullam elementum urna nisi, pellentesque iaculis enim cursus in. Praesent venenatis erat pulvinar nisi molestie, ac facilisis mauris pellentesque. Morbi convallis, enim sit amet iaculis mollis, dolor justo malesuada nulla, non hendrerit tellus eros ut ex. Quisque porta faucibus velit. Vivamus feugiat faucibus orci, quis convallis ipsum convallis id. Vivamus aliquet pellentesque placerat. In pellentesque congue tempor. Suspendisse non pharetra orci, sit amet hendrerit dolor.".split()
+const loremIpsum = "Lorem ipsum dolor sit amet.".split();
+
+function getMockLLMStream(userMessage: UserMessage): Observable<Chunk> {
+  // V0 one solid answer
+  // return after(1000, {
+  //   text: "The answer is sesame.",
+  // });
+
+  // V1 streaming
+  const nonReactEffect = (notify) => {
+    let wordIdx = 0;
+    const id = setInterval(() => {
+      notify.next({
+        text: loremIpsum[wordIdx++],
+      });
+    }, 500);
+    return () => {
+      clearInterval(id);
+    };
+  };
+  return new Observable(nonReactEffect);
+}
+
+export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
+  getMockLLMStream,
+  [] // initial messages
+);
+chatFx.reduceWith((messages, { type, payload }) => {
+  if (type === "request") {
+    // Append it as the first message
+    return [payload];
+  }
+  if (type === "response") {
+    messages.push({ type: "assistant", content: payload.text });
+    return messages;
+    // return [
+    //   ...messages,
+    //   {
+    //     type: "assistant",
+    //     content: payload.text,
+    //   },
+    // ];
+  }
+  return messages;
+}, []);
 // #endregion

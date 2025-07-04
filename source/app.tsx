@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Text, Box, useStdout, useInput } from "ink";
 import TextInput from "ink-text-input";
 import { chatFx } from "./effects/chatEffect.js";
-import { useFx } from "@rxfx/react";
+import { useFx, useWhileMounted } from "@rxfx/react";
 import { trace } from "rxfx";
 
 interface ChatMessageProps {
@@ -44,14 +44,20 @@ export default function App() {
   const { write } = useStdout();
 
   // 1. TODO Hook up service state as variable 'messages'
-  const messages = [];
+  const { state: messages } = useFx(chatFx);
   // 2. TODO show loading/active states
 
   // 4. Trace logs
+  useWhileMounted(() =>
+    trace(chatFx, "chat", (type, payload) => {
+      write(`${type}: ${JSON.stringify(payload)}`);
+    })
+  );
 
   useInput((_, key) => {
     if (key.escape) {
       // 3. TODO suppport cancelation, reset
+      chatFx.cancelCurrent();
     }
 
     if (key.upArrow) {
@@ -69,6 +75,7 @@ export default function App() {
     setQuery("");
 
     // 1. TODO Call chat effect with userMessage
+    chatFx(userMessage);
   }
 
   return (
