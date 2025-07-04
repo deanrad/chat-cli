@@ -145,7 +145,7 @@ _chatFx.reduceWith(
 // 0. Mock state and effect
 
 // const loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget felis eget urna ultricies tincidunt vel ut nisi. Fusce auctor, libero vel lacinia interdum, nibh nisi semper urna, at efficitur metus nulla et lacus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras sagittis, arcu sed finibus feugiat, ipsum neque egestas eros, vel aliquam sapien dolor sit amet libero. Suspendisse potenti. Proin consectetur aliquam odio, a molestie lorem finibus at. Nullam elementum urna nisi, pellentesque iaculis enim cursus in. Praesent venenatis erat pulvinar nisi molestie, ac facilisis mauris pellentesque. Morbi convallis, enim sit amet iaculis mollis, dolor justo malesuada nulla, non hendrerit tellus eros ut ex. Quisque porta faucibus velit. Vivamus feugiat faucibus orci, quis convallis ipsum convallis id. Vivamus aliquet pellentesque placerat. In pellentesque congue tempor. Suspendisse non pharetra orci, sit amet hendrerit dolor.".split()
-const loremIpsum = "Lorem ipsum dolor sit amet.".split();
+const loremIpsum = "Lorem ipsum dolor sit amet.".split(" ");
 
 function getMockLLMStream(userMessage: UserMessage): Observable<Chunk> {
   // V0 one solid answer
@@ -160,34 +160,53 @@ function getMockLLMStream(userMessage: UserMessage): Observable<Chunk> {
       notify.next({
         text: loremIpsum[wordIdx++],
       });
+
+      if (wordIdx >= loremIpsum.length) {
+        notify.complete();
+        clearInterval(id);
+      }
     }, 500);
     return () => {
       clearInterval(id);
     };
   };
+
   return new Observable(nonReactEffect);
 }
 
+const initialMessages: Message[] = [];
+
 export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
   getMockLLMStream,
-  [] // initial messages
+  initialMessages
 );
 chatFx.reduceWith((messages, { type, payload }) => {
   if (type === "request") {
-    // Append it as the first message
-    return [payload];
+    return [
+      payload, // Append it as the first message
+      { role: "assistant", content: "" }, // placeholder
+    ];
   }
   if (type === "response") {
-    messages.push({ type: "assistant", content: payload.text });
-    return messages;
+    // V0 one message, mutating
     // return [
     //   ...messages,
     //   {
-    //     type: "assistant",
+    //     role: "assistant",
     //     content: payload.text,
     //   },
     // ];
+
+    // V1 streaming
+    const [request, response] = messages;
+    return [
+      request,
+      {
+        ...response,
+        content: response.content + " " + payload.text,
+      },
+    ];
   }
   return messages;
-}, []);
+}, initialMessages);
 // #endregion
