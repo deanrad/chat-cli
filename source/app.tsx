@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useStdout, useInput } from "ink";
 import TextInput from "ink-text-input";
-import { chatFx } from "./effects/chatEffect.js";
-import { useFx } from "@rxfx/react";
+import { useWhileMounted } from "@rxfx/react";
 import { trace } from "rxfx";
+
+import { useFx } from "@rxfx/react";
 
 interface ChatMessageProps {
   message: Message;
@@ -25,8 +26,8 @@ Yb,  88      \`8b          Yb,_    88
 
 const cannedPrompts = [
   "Who is Sam Altman?",
-  "Your name is Fido",
-  "Bark your name",
+  "Who was Grace Hopper?",
+  "What's your name?",
 ];
 let promptIdx = 0;
 
@@ -44,27 +45,25 @@ export default function App() {
   const { write } = useStdout();
 
   // 1. TODO Hook up service state as variable 'messages'
+  // 3. TODO show loading/active states
   const messages = [];
-  // 2. TODO show loading/active states
 
-  // 4. Trace logs
+  // 2. Display log messages
 
   useInput((_, key) => {
     if (key.escape) {
-      // 3. TODO suppport cancelation, reset
+      // 4. TODO suppport cancelation, reset
     }
 
     if (key.upArrow) {
-      setQuery(cannedPrompts[promptIdx++]); // just an example
+      setQuery(cannedPrompts[promptIdx++ % 3]); // just an example
     }
   });
 
   function handleSubmit(value) {
     const userMessage = {
-      id: randomId(),
-      content: value,
       role: "user",
-      createdAt: new Date(),
+      content: value,
     };
     setQuery("");
 
@@ -83,8 +82,8 @@ export default function App() {
       </Box>
       <Box>
         <Text>
-          {/* 2. TODO Display Loading, Active states */}
-          {/* 4. TODO Trap and display any error */}
+          {/* 3. TODO Display Loading, Active states */}
+          {/* 5. TODO Trap and display any error */}
           Ask the <Text bold>AI</Text>{" "}
           <Text dimColor> (Esc to cancel, Ctrl-C to quit)</Text>:
         </Text>
@@ -94,11 +93,11 @@ export default function App() {
         <TextInput
           value={query}
           onChange={(v) => {
-            // 5. TODO Block while answering
+            // 6. TODO Block while answering
             setQuery(v);
           }}
           onSubmit={(value) => {
-            // 5. TODO Block while answering
+            // 6. TODO Block while answering
             handleSubmit(value);
           }}
           width={50}
@@ -109,8 +108,15 @@ export default function App() {
   );
 }
 
-function randomId(length = 7) {
-  return Math.floor(Math.pow(2, length * 4) * Math.random())
-    .toString(16)
-    .padStart(length, "0");
+// trace utility hook - avail in @rxfx/react 1.1.7
+function useTrace(
+  fx: EffectRunner<any, any>,
+  name: string,
+  traceFn = console.log.bind(console)
+) {
+  useWhileMounted(() =>
+    trace(fx, name, (type, payload) => {
+      traceFn(`${type}: ${JSON.stringify(payload)}`);
+    })
+  );
 }
