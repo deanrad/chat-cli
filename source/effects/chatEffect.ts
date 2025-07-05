@@ -11,14 +11,12 @@ import OpenAI from "openai";
 import { produce } from "immer";
 
 // #region Types
-export type MessageRole = "user" | "assistant" | "system";
+export type MessageRole = "user" | "assistant";
 
 export interface Message {
   id: string;
-  content: string;
   role: MessageRole;
-  createdAt: Date;
-  isComplete?: boolean;
+  content: string;
 }
 export interface UserMessage extends Message {
   role: "user";
@@ -114,8 +112,6 @@ _chatFx.reduceWith(
         id: origId,
         content: "",
         role: "assistant",
-        createdAt: new Date(),
-        isComplete: false,
       };
 
       // prefix only the request in state, so updates find the response
