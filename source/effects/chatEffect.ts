@@ -66,51 +66,71 @@ const loremIpsum =
   );
 // const loremIpsum = "Lorem ipsum dolor sit amet.".split(" ");
 
+const reducer = produce((messages, event) => {
+  if (event.type === "request") {
+    const userMessage = event.payload;
+    const origId = "" + userMessage.id;
+
+    // create placeholder
+    const assistantMessage: AssistantMessage = {
+      id: origId,
+      content: "",
+      role: "assistant",
+    };
+
+    // prefix only the request in state, so updates find the response
+    messages.push({ ...userMessage, id: `req-${origId}` });
+    messages.push(assistantMessage);
+  }
+  if (event.type === "response") {
+    const chunk = event.payload;
+    const response = messages.find(
+      (m) => m.id === chunk.forRequestId && m.role === "assistant"
+    );
+    response.content += chunk.text;
+  }
+
+  if (event.type === "canceled") {
+    const response = messages.find(
+      (m) => m.id === event.payload.id && m.role === "assistant"
+    );
+    response.content += " (Canceled)";
+  }
+
+  return messages;
+});
+
 // 7. TODO Bonus: Introduce a delay after which each token is printed
-export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
-  getMockLLMStream, // getRealLLMStream,
+export const chatFxReal = createEffect<UserMessage, Chunk, Error, Message[]>(
+  getRealLLMStream,
   initialMessages
 );
-
-// Use the reducer to populate chatRxFxService.state
-chatFx.reduceWith(
-  produce((messages, event) => {
-    if (event.type === "request") {
-      const userMessage = event.payload;
-      const origId = "" + userMessage.id;
-
-      // create placeholder
-      const assistantMessage: AssistantMessage = {
-        id: origId,
-        content: "",
-        role: "assistant",
-      };
-
-      // prefix only the request in state, so updates find the response
-      messages.push({ ...userMessage, id: `req-${origId}` });
-      messages.push(assistantMessage);
-    }
-    if (event.type === "response") {
-      const chunk = event.payload;
-      const response = messages.find(
-        (m) => m.id === chunk.forRequestId && m.role === "assistant"
-      );
-      response.content += chunk.text;
-    }
-
-    if (event.type === "canceled") {
-      const response = messages.find(
-        (m) => m.id === event.payload.id && m.role === "assistant"
-      );
-      response.content += " (Canceled)";
-    }
-
-    return messages;
-  }),
+chatFxReal.reduceWith(
+  reducer,
   [] // initial value
 );
 
-// 0. Mock state and effect
+export const chatFxMockPromise = createEffect<
+  UserMessage,
+  Chunk,
+  Error,
+  Message[]
+>(getMockLLMStreamPromise, initialMessages);
+chatFxMockPromise.reduceWith(
+  reducer,
+  [] // initial value
+);
+
+export const chatFxMockObservable = createEffect<
+  UserMessage,
+  Chunk,
+  Error,
+  Message[]
+>(getMockLLMStreamObservable, initialMessages);
+chatFxMockObservable.reduceWith(
+  reducer,
+  [] // initial value
+);
 
 function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
   // 4. TODO Notify of any error from making the API call
@@ -151,7 +171,7 @@ function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
   });
 }
 
-function getMockLLMStream(userMessage: UserMessage): Observable<Chunk> {
+function getMockLLMStreamPromise(userMessage: UserMessage): Observable<Chunk> {
   // V0 one solid answer
   return new Promise<Chunk>((resolve) =>
     setTimeout(
@@ -163,29 +183,36 @@ function getMockLLMStream(userMessage: UserMessage): Observable<Chunk> {
       1000
     )
   );
-
-  // V1 streaming - raw interval
-  // return new Observable((notify) => {
-  //   let wordIdx = 0;
-  //   const id = setInterval(() => {
-  //     notify.next({
-  //       text: loremIpsum[wordIdx++],
-  //     });
-
-  //     if (wordIdx >= loremIpsum.length) {
-  //       clearInterval(id);
-  //       notify.complete();
-  //     }
-  //   }, 500);
-
-  //   return () => {
-  //     clearInterval(id);
-  //   };
-  // });
-
-  // V1 streaming - RxJS
-  // return interval(500).pipe(
-  //   take(loremIpsum.length - 1),
-  //   map((wordIdx) => ({ text: loremIpsum[wordIdx] }))
-  // );
 }
+
+function getMockLLMStreamObservable(
+  userMessage: UserMessage
+): Observable<Chunk> {
+  // V1 streaming - RxJS
+  return interval(500).pipe(
+    take(loremIpsum.length - 1),
+    map((wordIdx) => ({
+      forRequestId: userMessage.id,
+      text: loremIpsum[wordIdx] + " ",
+    }))
+  );
+}
+
+// Streaming - raw interval
+// function getMockLLMStreamInterval(userMessage: UserMessage): Observable<Chunk> {
+//   return new Observable((notify) => {
+//     let wordIdx = 0;
+//     const id = setInterval(() => {
+//       notify.next({
+//         text: loremIpsum[wordIdx++],
+//       });
+
+//       if (wordIdx >= loremIpsum.length) {
+//         clearInterval(id);
+//         notify.complete();
+//       }
+//     }, 500);
+
+//     return () => clearInterval(id);
+//   });
+// }
