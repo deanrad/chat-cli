@@ -7,6 +7,9 @@ import {
   THRESHOLD,
   randomizePreservingAverage,
 } from "rxfx";
+import { interval } from "rxjs";
+import { take, map } from "rxjs/operators";
+
 import OpenAI from "openai";
 import { produce } from "immer";
 
@@ -26,7 +29,7 @@ export interface AssistantMessage extends Message {
 }
 
 export interface Chunk {
-  requestId: string;
+  forRequestId: string;
   text: string;
 }
 
@@ -55,7 +58,61 @@ const openai = new OpenAI({
 
 // #region Chat Effect definition, effect creation, and reducer
 
-function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
+const initialMessages: Message[] = [];
+
+const loremIpsum =
+  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget felis eget urna ultricies tincidunt vel ut nisi. Fusce auctor, libero vel lacinia interdum, nibh nisi semper urna, at efficitur metus nulla et lacus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras sagittis, arcu sed finibus feugiat, ipsum neque egestas eros, vel aliquam sapien dolor sit amet libero. Suspendisse potenti. Proin consectetur aliquam odio, a molestie lorem finibus at. Nullam elementum urna nisi, pellentesque iaculis enim cursus in. Praesent venenatis erat pulvinar nisi molestie, ac facilisis mauris pellentesque. Morbi convallis, enim sit amet iaculis mollis, dolor justo malesuada nulla, non hendrerit tellus eros ut ex. Quisque porta faucibus velit. Vivamus feugiat faucibus orci, quis convallis ipsum convallis id. Vivamus aliquet pellentesque placerat. In pellentesque congue tempor. Suspendisse non pharetra orci, sit amet hendrerit dolor.".split(
+    " "
+  );
+// const loremIpsum = "Lorem ipsum dolor sit amet.".split(" ");
+
+// 7. TODO Bonus: Introduce a delay after which each token is printed
+export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
+  getMockLLMStream, // getRealLLMStream,
+  initialMessages
+);
+
+// Use the reducer to populate chatRxFxService.state
+chatFx.reduceWith(
+  produce((messages, event) => {
+    if (event.type === "request") {
+      const userMessage = event.payload;
+      const origId = "" + userMessage.id;
+
+      // create placeholder
+      const assistantMessage: AssistantMessage = {
+        id: origId,
+        content: "",
+        role: "assistant",
+      };
+
+      // prefix only the request in state, so updates find the response
+      messages.push({ ...userMessage, id: `req-${origId}` });
+      messages.push(assistantMessage);
+    }
+    if (event.type === "response") {
+      const chunk = event.payload;
+      const response = messages.find(
+        (m) => m.id === chunk.forRequestId && m.role === "assistant"
+      );
+      response.content += chunk.text;
+    }
+
+    if (event.type === "canceled") {
+      const response = messages.find(
+        (m) => m.id === event.payload.id && m.role === "assistant"
+      );
+      response.content += " (Canceled)";
+    }
+
+    return messages;
+  }),
+  [] // initial value
+);
+
+// 0. Mock state and effect
+
+function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
   // 4. TODO Notify of any error from making the API call
   return new Observable((notify) => {
     let canceled = false; // in order to truly stop streaming
@@ -80,7 +137,7 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
 
           // notify.next args become a piece of Observable output
           notify.next({
-            requestId: userMessage.id,
+            forRequestId: userMessage.id,
             text: delta.content,
           });
         }
@@ -94,115 +151,41 @@ function getLLMStream(userMessage: UserMessage): Observable<Chunk> {
   });
 }
 
-// 7. TODO Bonus: Introduce a delay after which each token is printed
-export const _chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
-  getLLMStream,
-  [] // initialState
-);
-
-// Use the reducer to populate chatRxFxService.state
-_chatFx.reduceWith(
-  produce((messages, event) => {
-    if (event.type === "request") {
-      const userMessage = event.payload;
-      const origId = "" + userMessage.id;
-
-      // create placeholder
-      const assistantMessage: AssistantMessage = {
-        id: origId,
-        content: "",
-        role: "assistant",
-      };
-
-      // prefix only the request in state, so updates find the response
-      messages.push({ ...userMessage, id: `req-${origId}` });
-      messages.push(assistantMessage);
-    }
-    if (event.type === "response") {
-      const chunk = event.payload;
-      const response = messages.find(
-        (m) => m.id === chunk.requestId && m.role === "assistant"
-      );
-      response.content += chunk.text;
-    }
-
-    if (event.type === "canceled") {
-      const response = messages.find(
-        (m) => m.id === event.payload.id && m.role === "assistant"
-      );
-      response.content += " (Canceled)";
-    }
-
-    return messages;
-  }),
-  [] // initial value
-);
-
-// 0. Mock state and effect
-
-// const loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget felis eget urna ultricies tincidunt vel ut nisi. Fusce auctor, libero vel lacinia interdum, nibh nisi semper urna, at efficitur metus nulla et lacus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras sagittis, arcu sed finibus feugiat, ipsum neque egestas eros, vel aliquam sapien dolor sit amet libero. Suspendisse potenti. Proin consectetur aliquam odio, a molestie lorem finibus at. Nullam elementum urna nisi, pellentesque iaculis enim cursus in. Praesent venenatis erat pulvinar nisi molestie, ac facilisis mauris pellentesque. Morbi convallis, enim sit amet iaculis mollis, dolor justo malesuada nulla, non hendrerit tellus eros ut ex. Quisque porta faucibus velit. Vivamus feugiat faucibus orci, quis convallis ipsum convallis id. Vivamus aliquet pellentesque placerat. In pellentesque congue tempor. Suspendisse non pharetra orci, sit amet hendrerit dolor.".split()
-const loremIpsum = "Lorem ipsum dolor sit amet.".split(" ");
-
 function getMockLLMStream(userMessage: UserMessage): Observable<Chunk> {
   // V0 one solid answer
-  // return after(1000, {
-  //   text: "The answer is sesame.",
+  return new Promise<Chunk>((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          forRequestId: userMessage.id,
+          text: "The answer is sesame.",
+        }),
+      1000
+    )
+  );
+
+  // V1 streaming - raw interval
+  // return new Observable((notify) => {
+  //   let wordIdx = 0;
+  //   const id = setInterval(() => {
+  //     notify.next({
+  //       text: loremIpsum[wordIdx++],
+  //     });
+
+  //     if (wordIdx >= loremIpsum.length) {
+  //       clearInterval(id);
+  //       notify.complete();
+  //     }
+  //   }, 500);
+
+  //   return () => {
+  //     clearInterval(id);
+  //   };
   // });
 
-  // V1 streaming
-  const nonReactEffect = (notify) => {
-    let wordIdx = 0;
-    const id = setInterval(() => {
-      notify.next({
-        text: loremIpsum[wordIdx++],
-      });
-
-      if (wordIdx >= loremIpsum.length) {
-        notify.complete();
-        clearInterval(id);
-      }
-    }, 500);
-    return () => {
-      clearInterval(id);
-    };
-  };
-
-  return new Observable(nonReactEffect);
+  // V1 streaming - RxJS
+  // return interval(500).pipe(
+  //   take(loremIpsum.length - 1),
+  //   map((wordIdx) => ({ text: loremIpsum[wordIdx] }))
+  // );
 }
-
-const initialMessages: Message[] = [];
-
-export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
-  getMockLLMStream,
-  initialMessages
-);
-chatFx.reduceWith((messages, { type, payload }) => {
-  if (type === "request") {
-    return [
-      payload, // Append it as the first message
-      { role: "assistant", content: "" }, // placeholder
-    ];
-  }
-  if (type === "response") {
-    // V0 one message, mutating
-    // return [
-    //   ...messages,
-    //   {
-    //     role: "assistant",
-    //     content: payload.text,
-    //   },
-    // ];
-
-    // V1 streaming
-    const [request, response] = messages;
-    return [
-      request,
-      {
-        ...response,
-        content: response.content + " " + payload.text,
-      },
-    ];
-  }
-  return messages;
-}, initialMessages);
-// #endregion

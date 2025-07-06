@@ -9,8 +9,8 @@ An example app of how RxFx can enable simpler building of Conversational UX apps
 
 ## Steps to build:
 
-0. Mock State and Services
-1. Send requests, get streaming updates
+0. Show Types, State, and Mocks
+1. Promise -> Interval -> RxJS response
 2. Add Loading/Active states
 3. Support Cancelation, Reset
 4. Handle errors, display logs
@@ -18,7 +18,10 @@ An example app of how RxFx can enable simpler building of Conversational UX apps
 6. Replace with real
 7. Adjust timing of printed chunks for realism (bonus!)
 
-_Can be speed-run in 10 minutes!_
+_Est. 15 minutes_
+
+8. But - mocks? Review them live..
+   _Another 5 minutes_
 
 ## Requirements:
 
