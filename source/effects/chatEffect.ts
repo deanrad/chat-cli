@@ -162,7 +162,7 @@ function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
       .create({
         model: "gpt-4.1",
         messages: [
-          ...chatFx.state.value,
+          ...chatFx.state.value!,
           { role: "user", content: userMessage.content },
         ],
         stream: true,
