@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
   createImmediateEffect as createEffect,
   Observable,
@@ -66,52 +65,50 @@ const loremIpsum =
   );
 // const loremIpsum = "Lorem ipsum dolor sit amet.".split(" ");
 
-const reducer = produce((messages, event) => {
-  if (event.type === "request") {
-    const userMessage = event.payload;
-    const origId = "" + userMessage.id;
-
-    // create placeholder
-    const assistantMessage: AssistantMessage = {
-      id: origId,
-      content: "",
-      role: "assistant",
-    };
-
-    // prefix only the request in state, so updates find the response
-    messages.push({ ...userMessage, id: `req-${origId}` });
-    messages.push(assistantMessage);
-  }
-  if (event.type === "response") {
-    const chunk = event.payload;
-    const response = messages.find(
-      (m) => m.id === chunk.forRequestId && m.role === "assistant"
-    );
-    response.content += chunk.text;
-  }
-
-  if (event.type === "canceled") {
-    const response = messages.find(
-      (m) => m.id === event.payload.id && m.role === "assistant"
-    );
-    response.content += " (Canceled)";
-  }
-
-  return messages;
-});
-
 // 7. TODO Bonus: Introduce a delay after which each token is printed
 export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
   // getMockLLMStreamPromise,
-  // getMockLLMStreamInterval,
+  getMockLLMStreamInterval,
   // getMockLLMStreamRxJS,
-  getRealLLMStream,
+  // getRealLLMStream,
   initialMessages
 );
-chatFx.reduceWith(reducer, initialMessages);
 
-function getMockLLMStreamPromise(userMessage: UserMessage): Observable<Chunk> {
-  // V0 one solid answer
+chatFx.reduceWith(
+  produce((messages, event) => {
+    if (event.type === "request") {
+      const userMessage = event.payload;
+      const origId = "" + userMessage.id;
+
+      // create placeholder
+      const assistantMessage: AssistantMessage = {
+        id: origId,
+        content: "",
+        role: "assistant",
+      };
+
+      // prefix only the request in state, so updates find the response
+      messages.push({ ...userMessage, id: `req-${origId}` });
+      messages.push(assistantMessage);
+    }
+    if (event.type === "response") {
+      const chunk = event.payload;
+      const response = messages[messages.length - 1]!;
+      response.content += chunk.text;
+    }
+
+    if (event.type === "canceled") {
+      const response = messages[messages.length - 1]!;
+      response.content += " (Canceled)";
+    }
+
+    return messages;
+  }),
+  initialMessages
+);
+
+function getMockLLMStreamPromise(userMessage: UserMessage): Promise<Chunk> {
+  // V0 answer
   return new Promise<Chunk>((resolve) =>
     setTimeout(
       () =>
@@ -172,7 +169,7 @@ function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
       })
       .then(async (stream) => {
         for await (const chunk of stream) {
-          const { delta } = chunk.choices[0];
+          const { delta } = chunk.choices[0]!;
 
           // If we don't break on cancelation - we will still be consuming the network response,
           // though the UI won't show it. Cancel responsibly.
