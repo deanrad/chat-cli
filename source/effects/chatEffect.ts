@@ -61,7 +61,7 @@ const openai = new OpenAI({
 const initialMessages: Message[] = [];
 
 const loremIpsum =
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget felis eget urna ultricies tincidunt vel ut nisi. Fusce auctor, libero vel lacinia interdum, nibh nisi semper urna, at efficitur metus nulla et lacus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras sagittis, arcu sed finibus feugiat, ipsum neque egestas eros, vel aliquam sapien dolor sit amet libero. Suspendisse potenti. Proin consectetur aliquam odio, a molestie lorem finibus at. Nullam elementum urna nisi, pellentesque iaculis enim cursus in. Praesent venenatis erat pulvinar nisi molestie, ac facilisis mauris pellentesque. Morbi convallis, enim sit amet iaculis mollis, dolor justo malesuada nulla, non hendrerit tellus eros ut ex. Quisque porta faucibus velit. Vivamus feugiat faucibus orci, quis convallis ipsum convallis id. Vivamus aliquet pellentesque placerat. In pellentesque congue tempor. Suspendisse non pharetra orci, sit amet hendrerit dolor.".split(
+  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam eget felis eget urna ultricies tincidunt vel ut nisi. Fusce auctor, libero vel lacinia interdum, nibh nisi semper urna, at efficitur metus nulla et lacus.".split(
     " "
   );
 // const loremIpsum = "Lorem ipsum dolor sit amet.".split(" ");
@@ -101,75 +101,14 @@ const reducer = produce((messages, event) => {
 });
 
 // 7. TODO Bonus: Introduce a delay after which each token is printed
-export const chatFxReal = createEffect<UserMessage, Chunk, Error, Message[]>(
+export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
+  // getMockLLMStreamPromise,
+  // getMockLLMStreamInterval,
+  // getMockLLMStreamRxJS,
   getRealLLMStream,
   initialMessages
 );
-chatFxReal.reduceWith(
-  reducer,
-  [] // initial value
-);
-
-export const chatFxMockPromise = createEffect<
-  UserMessage,
-  Chunk,
-  Error,
-  Message[]
->(getMockLLMStreamPromise, initialMessages);
-chatFxMockPromise.reduceWith(
-  reducer,
-  [] // initial value
-);
-
-export const chatFxMockObservable = createEffect<
-  UserMessage,
-  Chunk,
-  Error,
-  Message[]
->(getMockLLMStreamObservable, initialMessages);
-chatFxMockObservable.reduceWith(
-  reducer,
-  [] // initial value
-);
-
-function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
-  // 4. TODO Notify of any error from making the API call
-  return new Observable((notify) => {
-    let canceled = false; // in order to truly stop streaming
-
-    openai.chat.completions
-      .create({
-        model: "gpt-4.1",
-        messages: [
-          ...chatFxReal.state.value,
-          { role: "user", content: userMessage.content },
-        ],
-        stream: true,
-      })
-      .then(async (stream) => {
-        for await (const chunk of stream) {
-          const { delta } = chunk.choices[0];
-
-          // If we don't break on cancelation - we will still be consuming the network response,
-          // though the UI won't show it. Cancel responsibly.
-          if (canceled) break;
-          if (!delta.content) continue;
-
-          // notify.next args become a piece of Observable output
-          notify.next({
-            forRequestId: userMessage.id,
-            text: delta.content,
-          });
-        }
-        // Always complete - since .next doesn't complete by itself, unlike Promise.resolve
-        notify.complete();
-      });
-
-    return () => {
-      canceled = true;
-    };
-  });
-}
+chatFx.reduceWith(reducer, initialMessages);
 
 function getMockLLMStreamPromise(userMessage: UserMessage): Observable<Chunk> {
   // V0 one solid answer
@@ -185,11 +124,30 @@ function getMockLLMStreamPromise(userMessage: UserMessage): Observable<Chunk> {
   );
 }
 
-function getMockLLMStreamObservable(
-  userMessage: UserMessage
-): Observable<Chunk> {
+// Streaming - raw interval - Note RxJS is cleaner
+function getMockLLMStreamInterval(userMessage: UserMessage): Observable<Chunk> {
+  let wordIdx = 0;
+
+  return new Observable((notify) => {
+    const id = setInterval(() => {
+      notify.next({
+        forRequestId: userMessage.id,
+        text: loremIpsum[wordIdx++] + " ",
+      });
+
+      if (wordIdx >= loremIpsum.length) {
+        clearInterval(id);
+        notify.complete();
+      }
+    }, 500);
+
+    return () => clearInterval(id);
+  });
+}
+
+function getMockLLMStreamRxJS(userMessage: UserMessage): Observable<Chunk> {
   // V1 streaming - RxJS
-  return interval(500).pipe(
+  return interval(THRESHOLD.AnimationShort).pipe(
     take(loremIpsum.length - 1),
     map((wordIdx) => ({
       forRequestId: userMessage.id,
@@ -198,21 +156,41 @@ function getMockLLMStreamObservable(
   );
 }
 
-// Streaming - raw interval
-// function getMockLLMStreamInterval(userMessage: UserMessage): Observable<Chunk> {
-//   return new Observable((notify) => {
-//     let wordIdx = 0;
-//     const id = setInterval(() => {
-//       notify.next({
-//         text: loremIpsum[wordIdx++],
-//       });
+function getRealLLMStream(userMessage: UserMessage): Observable<Chunk> {
+  // 4. TODO Notify of any error from making the API call
+  return new Observable((notify) => {
+    let canceled = false; // in order to truly stop streaming
 
-//       if (wordIdx >= loremIpsum.length) {
-//         clearInterval(id);
-//         notify.complete();
-//       }
-//     }, 500);
+    openai.chat.completions
+      .create({
+        model: "gpt-4.1",
+        messages: [
+          ...chatFx.state.value,
+          { role: "user", content: userMessage.content },
+        ],
+        stream: true,
+      })
+      .then(async (stream) => {
+        for await (const chunk of stream) {
+          const { delta } = chunk.choices[0];
 
-//     return () => clearInterval(id);
-//   });
-// }
+          // If we don't break on cancelation - we will still be consuming the network response,
+          // though the UI won't show it. Cancel responsibly.
+          if (canceled) break;
+          if (!delta.content) continue;
+
+          // notify.next arg becomes a piece of Observable output
+          notify.next({
+            forRequestId: userMessage.id,
+            text: delta.content,
+          });
+        }
+        // Always complete - since .next doesn't complete by itself, unlike Promise.resolve
+        notify.complete();
+      });
+
+    return () => {
+      canceled = true;
+    };
+  });
+}

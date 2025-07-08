@@ -2,13 +2,15 @@
 import React, { useState, useEffect } from "react";
 import { Text, Box, useStdout, useInput } from "ink";
 import TextInput from "ink-text-input";
-import { chatFxMockPromise as chatFx } from "./effects/chatEffect.js";
+import { chatFx } from "./effects/chatEffect.js";
 import { useFx, useWhileMounted } from "@rxfx/react";
 import { trace } from "rxfx";
+
 
 interface ChatMessageProps {
   message: Message;
 }
+
 
 const banner = `
  ,ggggggggggg,             ,gggggggggggggg
