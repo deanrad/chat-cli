@@ -1,4 +1,4 @@
-import { createImmediateEffect as createEffect, Observable } from "rxfx";
+import { createBlockingEffect as createEffect, Observable } from "rxfx";
 import OpenAI from "openai";
 import { produce } from "immer";
 
@@ -49,16 +49,36 @@ const initialMessages: Message[] = [];
 
 export const chatFx = createEffect<UserMessage, Chunk, Error, Message[]>(
   // 1. TODO Iterate through mocks toward the full real stream
-  () => {},
   // getMockLLMStreamPromise,
   // getMockLLMStreamInterval,
-  // getRealLLMStream,
+  getRealLLMStream,
   initialMessages
 );
 
 chatFx.reduceWith(
   produce((messages, event) => {
     // 1. TODO merge request/response event payloads into state
+    if (event.type === "request") {
+      const userMessage = event.payload;
+
+      messages.push(userMessage);
+      messages.push({
+        role: "assistant",
+        content: "", // placeholder for response
+      });
+    }
+
+    if (event.type === "response") {
+      const chunk = event.payload;
+      const response = messages[messages.length - 1]!;
+      response.content += chunk;
+    }
+
+    if (event.type === "canceled") {
+      const chunk = event.payload;
+      const response = messages[messages.length - 1]!;
+      response.content += " (Canceled)";
+    }
 
     return messages;
   }),
@@ -85,7 +105,7 @@ function getMockLLMStreamInterval(userMessage: UserMessage): Observable<Chunk> {
         clearInterval(id);
         notify.complete();
       }
-    }, THRESHOLD.AnimationLong);
+    }, THRESHOLD.AnimationShort);
 
     // cleanup function
     return () => clearInterval(id);

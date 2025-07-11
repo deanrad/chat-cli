@@ -6,6 +6,7 @@ import { useWhileMounted } from "@rxfx/react";
 import { trace } from "rxfx";
 
 import { useFx } from "@rxfx/react";
+import { chatFx } from "./effects/chatEffect.js";
 
 interface ChatMessageProps {
   message: Message;
@@ -46,13 +47,19 @@ export default function App() {
 
   // 1. TODO Hook up service state as variable 'messages'
   // 3. TODO show loading/active states
-  const messages = [];
+  const { state: messages, isActive, isLoading, currentError } = useFx(chatFx);
 
   // 2. Display log messages
+  // useTrace(chatFx, "chat-fx");
 
   useInput((_, key) => {
     if (key.escape) {
       // 4. TODO suppport cancelation, reset
+      if (isActive) {
+        chatFx.cancelCurrent();
+      } else {
+        chatFx.reset();
+      }
     }
 
     if (key.upArrow) {
@@ -68,6 +75,7 @@ export default function App() {
     setQuery("");
 
     // 1. TODO Call chat effect with userMessage
+    chatFx(userMessage);
   }
 
   return (
@@ -83,7 +91,9 @@ export default function App() {
       <Box>
         <Text>
           {/* 3. TODO Display Loading, Active states */}
+          {isActive ? (isLoading ? "(Loading) " : "(Working) ") : ""}
           {/* 5. TODO Trap and display any error */}
+          {currentError ? <Text color="red">{currentError + "\n"}</Text> : ""}
           Ask the <Text bold>AI</Text>{" "}
           <Text dimColor> (Esc to cancel, Ctrl-C to quit)</Text>:
         </Text>
@@ -94,10 +104,12 @@ export default function App() {
           value={query}
           onChange={(v) => {
             // 6. TODO Block while answering
+            if (isActive) return;
             setQuery(v);
           }}
           onSubmit={(value) => {
             // 6. TODO Block while answering
+            if (isActive) return;
             handleSubmit(value);
           }}
           width={50}
