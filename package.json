@@ -23,6 +23,8 @@
 		"immer": "^10.1.1",
 		"ink": "^4.1.0",
 		"ink-text-input": "^6.0.0",
+		"react-markdown": "^8.0.7",
+		"remark-gfm": "^3.0.1",
 		"meow": "^11.0.0",
 		"openai": "^5.7.0",
 		"react": "^18.2.0"

@@ -3,6 +3,7 @@ import React, {useState, useEffect} from 'react';
 import {Text, Box, useStdout, useInput} from 'ink';
 import TextInput from 'ink-text-input';
 import {chatFx, Message} from './services/chatService.js';
+import InkMarkdown from './components/InkMarkdown.js';
 import {trace} from '@rxfx/effect';
 import {useAtMountTime, useService} from '@rxfx/react';
 type Props = {
@@ -29,7 +30,10 @@ export function ChatMessage({message}: ChatMessageProps) {
 	const isUser = message.role === 'user';
 	return (
 		<Box justifyContent={isUser ? 'flex-end' : 'flex-start'}>
-			<Text>{message.content + '\n'} </Text>
+			<Box>
+				<InkMarkdown source={message.content} />
+				<Text> </Text>
+			</Box>
 		</Box>
 	);
 }
