@@ -34,37 +34,50 @@ const ListItem = ({children, checked}) => {
 	);
 };
 
-export default function InkMarkdown({source}: {source: string}) {
-	return (
-		<Box flexDirection="column">
-			<ReactMarkdown
-				remarkPlugins={[remarkGfm]}
-				components={{
-					code: ({inline, children}) =>
-						inline ? (
-							<InlineCode>{children}</InlineCode>
-						) : (
-							<CodeBlock>{children}</CodeBlock>
+
+	function normalizeChildren(children) {
+		return React.Children.map(children, child => {
+			if (typeof child === 'string') {
+				return <Text>{child}</Text>;
+			}
+			return child;
+		});
+	}
+
+	export default function InkMarkdown({source}: {source: string}) {
+		return (
+			<Box flexDirection="column">
+				<ReactMarkdown
+					remarkPlugins={[remarkGfm]}
+					components={{
+						root: ({children}) => (
+							<Box flexDirection="column">{normalizeChildren(children)}</Box>
 						),
-					p: ({children}) => <Text>{children}</Text>,
-					strong: ({children}) => <Text bold>{children}</Text>,
-					em: ({children}) => <Text italic>{children}</Text>,
-					h1: ({children}) => <Text bold>{children}</Text>,
-					h2: ({children}) => <Text bold>{children}</Text>,
-					h3: ({children}) => <Text bold>{children}</Text>,
-					ul: ({children}) => <Box flexDirection="column">{children}</Box>,
-					ol: ({children}) => <Box flexDirection="column">{children}</Box>,
-					li: ListItem,
-					a: Link,
-					blockquote: ({children}) => (
-						<Text dimColor italic>
-							{children}
-						</Text>
-					),
-				}}
-			>
-				{source}
-			</ReactMarkdown>
-		</Box>
-	);
-}
+						code: ({inline, children}) =>
+							inline ? (
+								<InlineCode>{children}</InlineCode>
+							) : (
+								<CodeBlock>{children}</CodeBlock>
+							),
+						p: ({children}) => <Text>{children}</Text>,
+						strong: ({children}) => <Text bold>{children}</Text>,
+						em: ({children}) => <Text italic>{children}</Text>,
+						h1: ({children}) => <Text bold>{children}</Text>,
+						h2: ({children}) => <Text bold>{children}</Text>,
+						h3: ({children}) => <Text bold>{children}</Text>,
+						ul: ({children}) => <Box flexDirection="column">{children}</Box>,
+						ol: ({children}) => <Box flexDirection="column">{children}</Box>,
+						li: ListItem,
+						a: Link,
+						blockquote: ({children}) => (
+							<Text dimColor italic>
+								{children}
+							</Text>
+						),
+					}}
+				>
+					{source}
+				</ReactMarkdown>
+			</Box>
+		);
+	}
