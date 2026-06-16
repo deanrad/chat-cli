@@ -1,9 +1,9 @@
 // @ts-nocheck
 import {createEffect, after} from '@rxfx/effect';
 import OpenAI from 'openai';
-import {Observable} from 'rxjs';
+import {Observable} from '@rxfx/service';
 import {produce} from 'immer';
-import {concatMap} from 'rxjs/operators';
+import {concatMap} from 'rxjs';
 
 // #region Types
 export type MessageRole = 'user' | 'assistant' | 'system';

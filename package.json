@@ -20,6 +20,7 @@
 		"@rxfx/effect": "^1.2.3",
 		"@rxfx/react": "^1.1.6",
 		"@rxfx/service": "^1.5.5",
+		"rxjs": "^7.8.2",
 		"immer": "^10.1.1",
 		"ink": "^4.1.0",
 		"ink-text-input": "^6.0.0",
